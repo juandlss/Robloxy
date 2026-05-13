@@ -13,12 +13,12 @@ Players.PlayerAdded:Connect(function(player)
 
 	local coins = Instance.new("IntValue")
 	coins.Name = "Coins"
-	coins.Value = 100 -- Starting coins
+	coins.Value = 100 
 	coins.Parent = leaderstats
 end)
 
 --------------------------------------------------
--- 2. HELPER FUNCTIONS
+-- 2. HELPER FUNCTIONS: SCENERY & TREES
 --------------------------------------------------
 local function createTree(folder, position)
 	local trunk = Instance.new("Part")
@@ -43,10 +43,99 @@ local function createTree(folder, position)
 	leaves.Parent = folder
 end
 
+local function scatterDecorations(folder, zoneName, floorZ)
+	local bushColor = BrickColor.new("Forest green")
+	local rockColor = BrickColor.new("Medium stone grey")
+	local rockMat = Enum.Material.Slate
+
+	if zoneName == "Desert Area" then
+		bushColor = BrickColor.new("Olive")
+		rockColor = BrickColor.new("Sand")
+	elseif zoneName == "Snow Area" then
+		bushColor = BrickColor.new("White")
+		rockColor = BrickColor.new("Pastel light blue")
+		rockMat = Enum.Material.Ice
+	elseif zoneName == "Lava Area" then
+		bushColor = BrickColor.new("Really black")
+		rockColor = BrickColor.new("Neon orange")
+		rockMat = Enum.Material.Neon
+	elseif zoneName == "Magic Area" then
+		bushColor = BrickColor.new("Magenta")
+		rockColor = BrickColor.new("Cyan")
+		rockMat = Enum.Material.Neon
+	elseif zoneName == "Void Area" then
+		bushColor = BrickColor.new("Really black")
+		rockColor = BrickColor.new("Royal purple")
+		rockMat = Enum.Material.Neon
+	end
+
+	-- Scatter 20 Bushes per zone
+	local bushesSpawned = 0
+	while bushesSpawned < 20 do
+		local rx = math.random(-110, 110)
+		local rz = math.random(-110, 110)
+		
+		local isValid = true
+		
+		-- 1. Keep the center paths clear
+		if math.abs(rx) <= 30 and math.abs(rz) <= 30 then
+			isValid = false
+		end
+		
+		-- 2. FIX: Keep the giant Coin Sandbox clear in the Main Area!
+		-- The sandbox is 170x170, so we avoid anything between -90 and 90
+		if zoneName == "Main Area" and math.abs(rx) <= 90 and math.abs(rz) <= 90 then
+			isValid = false
+		end
+		
+		if isValid then
+			bushesSpawned = bushesSpawned + 1
+			local bush = Instance.new("Part")
+			bush.Name = "Bush"
+			bush.Shape = Enum.PartType.Ball
+			bush.Size = Vector3.new(math.random(6,12), math.random(5,9), math.random(6,12))
+			bush.Position = Vector3.new(rx, bush.Size.Y/2, floorZ + rz)
+			bush.Anchored = true
+			bush.BrickColor = bushColor
+			bush.Material = Enum.Material.SmoothPlastic
+			bush.Parent = folder
+		end
+	end
+
+	-- Scatter 15 Rocks/Crystals per zone
+	local rocksSpawned = 0
+	while rocksSpawned < 15 do
+		local rx = math.random(-110, 110)
+		local rz = math.random(-110, 110)
+		
+		local isValid = true
+		
+		if math.abs(rx) <= 30 and math.abs(rz) <= 30 then
+			isValid = false
+		end
+		
+		if zoneName == "Main Area" and math.abs(rx) <= 90 and math.abs(rz) <= 90 then
+			isValid = false
+		end
+		
+		if isValid then
+			rocksSpawned = rocksSpawned + 1
+			local rock = Instance.new("Part")
+			rock.Name = "Rock"
+			rock.Size = Vector3.new(math.random(3,8), math.random(3,8), math.random(3,8))
+			rock.Position = Vector3.new(rx, rock.Size.Y/2, floorZ + rz)
+			rock.Orientation = Vector3.new(math.random(0,360), math.random(0,360), math.random(0,360))
+			rock.Anchored = true
+			rock.BrickColor = rockColor
+			rock.Material = rockMat
+			rock.Parent = folder
+		end
+	end
+end
+
 --------------------------------------------------
 -- 3. THE MASTER ZONE LIST
 --------------------------------------------------
--- You can easily add more zones here or change their prices!
 local zoneData = {
 	{Name = "Start Area", Color = BrickColor.new("Shamrock"), Cost = 0},
 	{Name = "Main Area", Color = BrickColor.new("Bright green"), Cost = 50},
@@ -68,12 +157,9 @@ local function buildPetSimLobby()
 	local totalZones = #zoneData
 	local zoneSize = 240
 
-	-- Loop through our table and build the world automatically!
 	for i, zone in ipairs(zoneData) do
-		-- Calculate where this specific zone should be placed
 		local floorZ = 240 - ((i - 1) * zoneSize)
 
-		-- 1. Build the Floor
 		local floor = Instance.new("Part")
 		floor.Name = "Floor_" .. zone.Name
 		floor.Size = Vector3.new(zoneSize, 1, zoneSize)
@@ -82,8 +168,16 @@ local function buildPetSimLobby()
 		floor.BrickColor = zone.Color
 		floor.Material = Enum.Material.SmoothPlastic
 		floor.Parent = lobbyFolder
+		
+		local path = Instance.new("Part")
+		path.Name = "Path_" .. zone.Name
+		path.Size = Vector3.new(20, 1.1, zoneSize)
+		path.Position = Vector3.new(0, 0, floorZ)
+		path.Anchored = true
+		path.BrickColor = BrickColor.new("Khaki")
+		path.Material = Enum.Material.SmoothPlastic
+		path.Parent = lobbyFolder
 
-		-- 2. Add Trees to the corners of this zone
 		local treePositions = {
 			Vector3.new(-100, 0, floorZ + 90), Vector3.new(100, 0, floorZ + 90),
 			Vector3.new(-100, 0, floorZ - 90), Vector3.new(100, 0, floorZ - 90)
@@ -91,10 +185,11 @@ local function buildPetSimLobby()
 		for _, pos in ipairs(treePositions) do
 			createTree(lobbyFolder, pos)
 		end
+		
+		scatterDecorations(lobbyFolder, zone.Name, floorZ)
 
-		-- 3. Build the Pay Wall (if it's not the starting area)
 		if i > 1 then
-			local gateZ = floorZ + (zoneSize / 2) -- Places it exactly between this zone and the previous one
+			local gateZ = floorZ + (zoneSize / 2) 
 
 			local payWall = Instance.new("Part")
 			payWall.Name = "Gate_" .. i
@@ -106,9 +201,8 @@ local function buildPetSimLobby()
 			payWall.Transparency = 0.4
 			payWall.Parent = lobbyFolder
 
-			-- NEW: Display text directly on the wall!
 			local surfaceGui = Instance.new("SurfaceGui")
-			surfaceGui.Face = Enum.NormalId.Back -- Faces towards the player walking forward
+			surfaceGui.Face = Enum.NormalId.Back 
 			surfaceGui.CanvasSize = Vector2.new(1000, 300)
 			surfaceGui.Parent = payWall
 
@@ -126,7 +220,6 @@ local function buildPetSimLobby()
 			textStroke.Color = Color3.fromRGB(0, 0, 0)
 			textStroke.Parent = wallText
 
-			-- The Prompt
 			local promptAttachment = Instance.new("Attachment")
 			promptAttachment.Position = Vector3.new(0, -25, 0) 
 			promptAttachment.Parent = payWall
@@ -151,7 +244,7 @@ local function buildPetSimLobby()
 					coins.Value = coins.Value - zone.Cost
 					gateOpened = true
 					prompt:Destroy() 
-					wallText:Destroy() -- Removes the text immediately so it doesn't float into the sky
+					wallText:Destroy() 
 
 					local tweenInfo = TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 					local goal = {
@@ -167,16 +260,16 @@ local function buildPetSimLobby()
 	end
 
 	-- ==========================================
-	-- GIANT OUTER WALLS (Dynamically calculates length!)
+	-- GIANT OUTER WALLS WITH 3D TRIMS
 	-- ==========================================
 	local totalLength = totalZones * zoneSize
-	local centerZ = 360 - (totalLength / 2) -- Math to find the exact middle point of the giant compound
+	local centerZ = 360 - (totalLength / 2) 
 
 	local wallData = {
-		{Size = Vector3.new(1, 60, totalLength), Pos = Vector3.new(-120, 30, centerZ)}, -- Left
-		{Size = Vector3.new(1, 60, totalLength), Pos = Vector3.new(120, 30, centerZ)},  -- Right
-		{Size = Vector3.new(240, 60, 1), Pos = Vector3.new(0, 30, 360 - totalLength)},  -- Very Front (End of Void)
-		{Size = Vector3.new(240, 60, 1), Pos = Vector3.new(0, 30, 360)}                 -- Very Back (Start Area)
+		{Size = Vector3.new(1, 60, totalLength), Pos = Vector3.new(-120, 30, centerZ)}, 
+		{Size = Vector3.new(1, 60, totalLength), Pos = Vector3.new(120, 30, centerZ)},  
+		{Size = Vector3.new(240, 60, 1), Pos = Vector3.new(0, 30, 360 - totalLength)},  
+		{Size = Vector3.new(240, 60, 1), Pos = Vector3.new(0, 30, 360)}                 
 	}
 
 	for i, data in ipairs(wallData) do
@@ -188,6 +281,20 @@ local function buildPetSimLobby()
 		wall.BrickColor = BrickColor.new("Light blue")
 		wall.Material = Enum.Material.SmoothPlastic
 		wall.Parent = lobbyFolder
+		
+		local bottomTrim = Instance.new("Part")
+		bottomTrim.Name = "BottomTrim"
+		bottomTrim.Size = Vector3.new(data.Size.X == 1 and 4 or data.Size.X, 6, data.Size.Z == 1 and 4 or data.Size.Z)
+		bottomTrim.Position = data.Pos - Vector3.new(0, 27, 0)
+		bottomTrim.Anchored = true
+		bottomTrim.BrickColor = BrickColor.new("Deep blue")
+		bottomTrim.Material = Enum.Material.SmoothPlastic
+		bottomTrim.Parent = lobbyFolder
+		
+		local topTrim = bottomTrim:Clone()
+		topTrim.Name = "TopTrim"
+		topTrim.Position = data.Pos + Vector3.new(0, 30, 0)
+		topTrim.Parent = lobbyFolder
 	end
 
 	-- ==========================================
@@ -204,13 +311,13 @@ local function buildPetSimLobby()
 	spawnLocation.Shape = Enum.PartType.Cylinder
 	spawnLocation.Size = Vector3.new(1, 16, 16)
 	spawnLocation.Orientation = Vector3.new(0, 0, 90)
-	spawnLocation.Position = Vector3.new(0, 1, 240) 
+	spawnLocation.Position = Vector3.new(0, 1.15, 240) 
 	spawnLocation.Anchored = true
 	spawnLocation.BrickColor = BrickColor.new("Cyan")
 	spawnLocation.Material = Enum.Material.SmoothPlastic
 	spawnLocation.Parent = lobbyFolder
 
-	print("Massive 7-Zone Map generated successfully!")
+	print("Bug Fixed: Sandbox area kept perfectly clear!")
 end
 
 buildPetSimLobby()
