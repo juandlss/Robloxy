@@ -1,5 +1,8 @@
 -- src/client/init.client.luau
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PetData = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PetData"))
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -161,6 +164,7 @@ gridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
 gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.Parent = itemScroll
 
+-- --- HELPER UI BUILDERS ---
 local function createItemBox(icon, labelText, quantity, color)
 	local box = Instance.new("Frame")
 	box.BackgroundColor3 = color
@@ -203,24 +207,73 @@ local function createItemBox(icon, labelText, quantity, color)
 	end
 end
 
+-- NEW: Builds functional pet boxes with equip buttons!
+local function createPetBox(petName)
+	local petInfo = PetData.Pets[petName]
+	if not petInfo then return end
+	
+	local box = Instance.new("Frame")
+	box.BackgroundColor3 = petInfo.Color
+	applyCartoonyStyle(box)
+	box.Parent = itemScroll
+	
+	local iconLabel = Instance.new("TextLabel")
+	iconLabel.Size = UDim2.new(1, 0, 0.5, 0)
+	iconLabel.BackgroundTransparency = 1
+	iconLabel.Font = Enum.Font.SourceSans
+	iconLabel.Text = petInfo.Icon
+	iconLabel.TextSize = 40
+	iconLabel.Parent = box
+	
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, 0, 0.2, 0)
+	nameLabel.Position = UDim2.new(0, 0, 0.5, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Font = Enum.Font.FredokaOne
+	nameLabel.Text = petName .. "\n" .. petInfo.Multiplier .. "x"
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextSize = 12
+	applyCartoonyStyle(nameLabel)
+	nameLabel.Parent = box
+
+	-- The Equip Button
+	local equipBtn = Instance.new("TextButton")
+	equipBtn.Size = UDim2.new(0.8, 0, 0.25, 0)
+	equipBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+	equipBtn.BackgroundColor3 = Color3.fromRGB(85, 255, 127)
+	equipBtn.Font = Enum.Font.FredokaOne
+	equipBtn.Text = "Equip"
+	equipBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+	equipBtn.TextSize = 12
+	applyCartoonyStyle(equipBtn)
+	equipBtn.Parent = box
+
+	equipBtn.MouseButton1Click:Connect(function()
+		ReplicatedStorage.PetRemotes.EquipPet:FireServer(petName)
+	end)
+end
+
 -- --- TAB LOGIC ---
 local function loadPetsTab()
-	petsTabBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 255) -- Active Blue
-	itemsTabBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) -- Inactive Gray
+	petsTabBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 255) 
+	itemsTabBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) 
 	
 	for _, child in ipairs(itemScroll:GetChildren()) do
 		if child:IsA("Frame") then child:Destroy() end
 	end
 	
-	createItemBox("🐶", "Dog", 1, Color3.fromRGB(200, 200, 200))
-	createItemBox("🐱", "Cat", 1, Color3.fromRGB(200, 200, 200))
-	createItemBox("🐰", "Bunny", 1, Color3.fromRGB(85, 255, 127))
-	createItemBox("🐉", "Dragon", 1, Color3.fromRGB(255, 85, 255))
+	-- Dynamically load REAL pets from the player's server data
+	local ownedPets = player:WaitForChild("OwnedPets", 10)
+	if ownedPets then
+		for _, petVal in ipairs(ownedPets:GetChildren()) do
+			createPetBox(petVal.Name)
+		end
+	end
 end
 
 local function loadItemsTab()
-	itemsTabBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 255) -- Active Blue
-	petsTabBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) -- Inactive Gray
+	itemsTabBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 255) 
+	petsTabBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) 
 	
 	for _, child in ipairs(itemScroll:GetChildren()) do
 		if child:IsA("Frame") then child:Destroy() end
@@ -309,7 +362,7 @@ createGamepassItem("🐾 +1 Pet Equip", 499, Color3.fromRGB(155, 89, 182))
 createGamepassItem("⚡ Fast Walk", 149, Color3.fromRGB(241, 196, 15))
 
 -- ==========================================
--- 6. NEW: SEPARATE SIDEBAR MENU BUTTONS
+-- 6. SIDEBAR MENU BUTTONS
 -- ==========================================
 local sideMenu = Instance.new("Frame")
 sideMenu.Size = UDim2.new(0, 70, 0, 300)
@@ -321,7 +374,6 @@ local sideMenuLayout = Instance.new("UIListLayout")
 sideMenuLayout.Padding = UDim.new(0, 10)
 sideMenuLayout.Parent = sideMenu
 
--- 1. The Pets Button
 local petsSideBtn = Instance.new("TextButton")
 petsSideBtn.Size = UDim2.new(1, 0, 0, 70)
 petsSideBtn.BackgroundColor3 = Color3.fromRGB(85, 170, 255) 
@@ -332,10 +384,9 @@ petsSideBtn.TextSize = 18
 applyCartoonyStyle(petsSideBtn)
 petsSideBtn.Parent = sideMenu
 
--- 2. The Items Button
 local itemsSideBtn = Instance.new("TextButton")
 itemsSideBtn.Size = UDim2.new(1, 0, 0, 70)
-itemsSideBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) -- Gray items button
+itemsSideBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150) 
 itemsSideBtn.Font = Enum.Font.FredokaOne
 itemsSideBtn.Text = "🧪\nItems" 
 itemsSideBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -343,7 +394,6 @@ itemsSideBtn.TextSize = 18
 applyCartoonyStyle(itemsSideBtn)
 itemsSideBtn.Parent = sideMenu
 
--- 3. The Shop Button
 local shopSideBtn = Instance.new("TextButton")
 shopSideBtn.Size = UDim2.new(1, 0, 0, 70)
 shopSideBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
@@ -355,36 +405,28 @@ applyCartoonyStyle(shopSideBtn)
 shopSideBtn.Parent = sideMenu
 
 -- ==========================================
--- 7. SMART TOGGLE LOGIC
+-- 7. SMART TOGGLE LOGIC & SERVER LISTENER
 -- ==========================================
-
--- Clicking Pets on the side menu
 petsSideBtn.MouseButton1Click:Connect(function()
 	if inventoryFrame.Visible and petsTabBtn.BackgroundColor3 == Color3.fromRGB(85, 170, 255) then
-		-- If it's already open and on the Pets tab, close it
 		inventoryFrame.Visible = false
 	else
-		-- Otherwise, open it and force it to the Pets tab
 		inventoryFrame.Visible = true
 		shopFrame.Visible = false 
 		loadPetsTab()
 	end
 end)
 
--- Clicking Items on the side menu
 itemsSideBtn.MouseButton1Click:Connect(function()
 	if inventoryFrame.Visible and itemsTabBtn.BackgroundColor3 == Color3.fromRGB(85, 170, 255) then
-		-- If it's already open and on the Items tab, close it
 		inventoryFrame.Visible = false
 	else
-		-- Otherwise, open it and force it to the Items tab
 		inventoryFrame.Visible = true
 		shopFrame.Visible = false 
 		loadItemsTab()
 	end
 end)
 
--- Clicking Shop on the side menu
 shopSideBtn.MouseButton1Click:Connect(function()
 	shopFrame.Visible = not shopFrame.Visible
 	inventoryFrame.Visible = false 
@@ -398,4 +440,12 @@ closeShopBtn.MouseButton1Click:Connect(function()
 	shopFrame.Visible = false
 end)
 
-print("Pet Simulator HUD with smart side-buttons loaded!")
+-- Listen for server telling us we hatched a new egg!
+ReplicatedStorage:WaitForChild("PetRemotes", 10):WaitForChild("UpdateInventory").OnClientEvent:Connect(function()
+	-- If we have the UI open and are looking at pets, refresh it to show the new one instantly
+	if inventoryFrame.Visible and petsTabBtn.BackgroundColor3 == Color3.fromRGB(85, 170, 255) then
+		loadPetsTab() 
+	end
+end)
+
+print("Client HUD fully updated with Pet Mechanics!")

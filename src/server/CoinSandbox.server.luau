@@ -78,15 +78,12 @@ local function spawnLoot()
 	health = maxHealth
 
 	-- ==========================================
-	-- FIX: PERFECT GROUND POSITIONING
+	-- PERFECT GROUND POSITIONING
 	-- ==========================================
 	local randomX = math.random(-80, 80)
 	local randomZ = math.random(-80, 80)
 	
-	-- Calculate exactly where the top surface of the sand is
 	local topOfSand = sandboxPart.Position.Y + (sandboxPart.Size.Y / 2)
-	
-	-- Find the actual height of the object (Blocks use Y, Rotated Cylinders use X)
 	local actualHeight
 	if isVault or isSafe then
 		actualHeight = loot.Size.Y
@@ -94,9 +91,7 @@ local function spawnLoot()
 		actualHeight = loot.Size.X
 	end
 	
-	-- Place the center of the object perfectly so its bottom rests on the sand
 	local perfectY = topOfSand + (actualHeight / 2)
-	
 	loot.Position = Vector3.new(sandboxPart.Position.X + randomX, perfectY, sandboxPart.Position.Z + randomZ)
 
 	-- ==========================================
@@ -140,14 +135,13 @@ local function spawnLoot()
 	clickDetector.Parent = loot
 
 	-- ==========================================
-	-- BREAKING MECHANIC
+	-- BREAKING MECHANIC & PET MULTIPLIERS
 	-- ==========================================
 	clickDetector.MouseClick:Connect(function(player)
 		health = health - 1
 		hitSound:Play()
 		
 		billboard.Enabled = true
-
 		local healthPercent = health / maxHealth
 		fillFrame.Size = UDim2.new(healthPercent, 0, 1, 0)
 		
@@ -163,18 +157,21 @@ local function spawnLoot()
 			loot.Size = loot.Size * 0.85 
 		end
 		
-		-- Adjust height down slightly as it shrinks so it stays touching the ground
 		loot.Position = loot.Position - Vector3.new(0, (actualHeight - (actualHeight * (isVault and 0.96 or (isSafe and 0.92 or 0.85)))) / 2, 0)
 		
 		if health <= 0 then
 			clickDetector:Destroy() 
 			billboard:Destroy() 
 			
+			-- >>> THE NEW PET MULTIPLIER MATH <<<
 			local leaderstats = player:FindFirstChild("leaderstats")
+			local petMultiplier = player:FindFirstChild("PetMultiplier")
+			
 			if leaderstats then
 				local coins = leaderstats:FindFirstChild("Coins")
 				if coins then
-					coins.Value = coins.Value + reward
+					local finalReward = reward * (petMultiplier and petMultiplier.Value or 1)
+					coins.Value = coins.Value + finalReward
 				end
 			end
 			
@@ -195,4 +192,4 @@ for i = 1, MAX_PILES do
 	spawnLoot()
 end
 
-print("Coin Sandbox with Fixed Ground Positioning loaded!")
+print("Coin Sandbox with Pet Multipliers loaded!")
