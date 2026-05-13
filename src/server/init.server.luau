@@ -168,15 +168,6 @@ local function buildPetSimLobby()
 	-- ==========================================
 	-- DECORATIONS
 	-- ==========================================
-	local giantEgg = Instance.new("Part")
-	giantEgg.Name = "GiantEgg"
-	giantEgg.Shape = Enum.PartType.Ball
-	giantEgg.Size = Vector3.new(25, 30, 25) 
-	giantEgg.Position = Vector3.new(0, 15, 0)
-	giantEgg.Anchored = true
-	giantEgg.BrickColor = BrickColor.new("Bright yellow")
-	giantEgg.Material = Enum.Material.Neon
-	giantEgg.Parent = lobbyFolder
 
 	local treePositions = {
 		Vector3.new(-100, 0, 150), Vector3.new(100, 0, 150), 
