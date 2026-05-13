@@ -32,17 +32,13 @@ local function spawnLoot()
 	local isSafe = randomChance > 5 and randomChance <= 20 
 
 	local loot = Instance.new("Part")
-	
-	local randomX = math.random(-80, 80)
-	local randomZ = math.random(-80, 80)
-	loot.Position = sandboxPart.Position + Vector3.new(randomX, 1.5, randomZ)
 	loot.Anchored = true
 	loot.Parent = sandboxPart
 
 	local health = 0
-	local maxHealth = 0 -- NEW: Track the starting health to calculate the bar percentage
+	local maxHealth = 0 
 	local reward = 0
-	local hpOffset = 0  -- NEW: How high above the object the health bar should float
+	local hpOffset = 0  
 
 	-- ==========================================
 	-- CONFIGURE LOOT STATS
@@ -55,7 +51,7 @@ local function spawnLoot()
 		loot.Material = Enum.Material.Metal
 		maxHealth = 20  
 		reward = 100 
-		hpOffset = 8 -- Floats high above the massive vault
+		hpOffset = 8 
 		
 	elseif isSafe then
 		loot.Name = "Safe"
@@ -65,7 +61,7 @@ local function spawnLoot()
 		loot.Material = Enum.Material.Neon
 		maxHealth = 10  
 		reward = 50  
-		hpOffset = 5 -- Floats moderately high
+		hpOffset = 5 
 		
 	else
 		loot.Name = "CoinPile"
@@ -76,34 +72,55 @@ local function spawnLoot()
 		loot.Material = Enum.Material.Neon
 		maxHealth = 5   
 		reward = 25  
-		hpOffset = 4 -- Floats just above the coin pile
+		hpOffset = 4 
 	end
 
-	health = maxHealth -- Set current health to whatever the max is
-	loot.Position = loot.Position + Vector3.new(0, loot.Size.Y / 2, 0)
+	health = maxHealth
+
+	-- ==========================================
+	-- FIX: PERFECT GROUND POSITIONING
+	-- ==========================================
+	local randomX = math.random(-80, 80)
+	local randomZ = math.random(-80, 80)
+	
+	-- Calculate exactly where the top surface of the sand is
+	local topOfSand = sandboxPart.Position.Y + (sandboxPart.Size.Y / 2)
+	
+	-- Find the actual height of the object (Blocks use Y, Rotated Cylinders use X)
+	local actualHeight
+	if isVault or isSafe then
+		actualHeight = loot.Size.Y
+	else
+		actualHeight = loot.Size.X
+	end
+	
+	-- Place the center of the object perfectly so its bottom rests on the sand
+	local perfectY = topOfSand + (actualHeight / 2)
+	
+	loot.Position = Vector3.new(sandboxPart.Position.X + randomX, perfectY, sandboxPart.Position.Z + randomZ)
 
 	-- ==========================================
 	-- CREATE THE HEALTH BAR UI
 	-- ==========================================
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "HealthBarGui"
-	billboard.Size = UDim2.new(4, 0, 0.8, 0) -- 4 studs wide
-	billboard.StudsOffset = Vector3.new(0, hpOffset, 0) -- Places it above the object
-	billboard.AlwaysOnTop = true -- Renders through other parts so you can always see it
-	billboard.Enabled = false -- Keeps it completely invisible until hit!
+	billboard.Size = UDim2.new(4, 0, 0.8, 0) 
+	billboard.StudsOffset = Vector3.new(0, hpOffset, 0) 
+	billboard.AlwaysOnTop = true 
+	billboard.Enabled = false 
 	billboard.Parent = loot
 
 	local bgFrame = Instance.new("Frame")
 	bgFrame.Name = "Background"
 	bgFrame.Size = UDim2.new(1, 0, 1, 0)
-	bgFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40) -- Dark grey background
+	bgFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40) 
 	bgFrame.BorderSizePixel = 2
 	bgFrame.Parent = billboard
 
 	local fillFrame = Instance.new("Frame")
 	fillFrame.Name = "Fill"
-	fillFrame.Size = UDim2.new(1, 0, 1, 0) -- Starts at 100% width
-	fillFrame.BackgroundColor3 = Color3.fromRGB(85, 255, 127) -- Starts Bright Green
+	fillFrame.Size = UDim2.new(1, 0, 1, 0) 
+	fillFrame.BackgroundColor3 = Color3.fromRGB(85, 255, 127) 
 	fillFrame.BorderSizePixel = 0
 	fillFrame.Parent = bgFrame
 
@@ -129,19 +146,15 @@ local function spawnLoot()
 		health = health - 1
 		hitSound:Play()
 		
-		-- 1. Show the health bar now that it has taken damage!
 		billboard.Enabled = true
 
-		-- 2. Update the health bar size and color
 		local healthPercent = health / maxHealth
 		fillFrame.Size = UDim2.new(healthPercent, 0, 1, 0)
 		
-		-- Bonus effect: The bar smoothly transitions from Green to Red as it takes damage
 		local redColor = Color3.fromRGB(255, 85, 85)
 		local greenColor = Color3.fromRGB(85, 255, 127)
 		fillFrame.BackgroundColor3 = redColor:Lerp(greenColor, healthPercent)
 		
-		-- 3. Visual shrink feedback
 		if isVault then
 			loot.Size = loot.Size * 0.96 
 		elseif isSafe then
@@ -150,10 +163,12 @@ local function spawnLoot()
 			loot.Size = loot.Size * 0.85 
 		end
 		
-		-- 4. Destroy logic
+		-- Adjust height down slightly as it shrinks so it stays touching the ground
+		loot.Position = loot.Position - Vector3.new(0, (actualHeight - (actualHeight * (isVault and 0.96 or (isSafe and 0.92 or 0.85)))) / 2, 0)
+		
 		if health <= 0 then
 			clickDetector:Destroy() 
-			billboard:Destroy() -- Instantly delete the health bar so it doesn't float over empty space
+			billboard:Destroy() 
 			
 			local leaderstats = player:FindFirstChild("leaderstats")
 			if leaderstats then
@@ -180,4 +195,4 @@ for i = 1, MAX_PILES do
 	spawnLoot()
 end
 
-print("Coin Sandbox with Dynamic Health Bars loaded!")
+print("Coin Sandbox with Fixed Ground Positioning loaded!")
